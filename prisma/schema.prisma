@@ -19,6 +19,8 @@ model User {
   name      String?
   email     String?   @unique
   image     String?
+  password  String?
+  role      Role      @default(USER)
   createdAt DateTime  @default(now()) @map(name: "created_at")
   updatedAt DateTime  @updatedAt @map(name: "updated_at")
   contents  Content[]
@@ -60,4 +62,9 @@ enum ContentType {
   IMAGE
   MUSIC
   VIDEO
+}
+
+enum Role {
+  USER
+  ADMIN
 }

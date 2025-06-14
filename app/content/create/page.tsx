@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from "@/components/Layout";
 import { ContentType } from "@prisma/client";
+import { auth } from "@/app/auth";
 
 type FormState = {
   title: string;
@@ -26,6 +27,28 @@ export default function CreateContent() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function getUserSession() {
+      try {
+        const session = await auth();
+        if (session?.user) {
+          setUser(session.user);
+        } else {
+          // Redirect to login if no user is found
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error fetching user session:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    getUserSession();
+  }, [router]);
 
   // Handle input changes
   const handleChange = (
@@ -94,6 +117,10 @@ export default function CreateContent() {
       }文件`;
     }
     
+    if (!user) {
+      newErrors.user = '您需要登录才能创建内容';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -134,7 +161,7 @@ export default function CreateContent() {
           contentType: formState.contentType,
           content: contentUrl,
           isAI: formState.isAI,
-          userId: 'anonymous', // In a real app, use actual user ID
+          userId: user.id,
         }),
       });
       
@@ -163,6 +190,34 @@ export default function CreateContent() {
       default: return '';
     }
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="ml-2 text-gray-600">加载中...</span>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto text-center py-12">
+          <h2 className="text-xl font-semibold mb-4">需要登录</h2>
+          <p className="text-gray-600 mb-6">您需要登录才能创建内容</p>
+          <button
+            onClick={() => router.push('/login')}
+            className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          >
+            去登录
+          </button>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
